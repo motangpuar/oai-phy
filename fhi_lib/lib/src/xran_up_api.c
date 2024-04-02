@@ -329,6 +329,7 @@ int32_t xran_extract_iq_samples(struct rte_mbuf *mbuf,
     uint8_t *subframe_id,
     uint8_t *slot_id,
     uint8_t *symb_id,
+    uint8_t *filter_id,
     union ecpri_seq_id *seq_id,
     uint16_t *num_prbu,
     uint16_t *start_prbu,
@@ -387,6 +388,8 @@ int32_t xran_extract_iq_samples(struct rte_mbuf *mbuf,
     if (symb_id)
         *symb_id = radio_hdr->sf_slot_sym.symb_id;
 
+    if (filter_id)
+	*filter_id = radio_hdr->data_feature.filter_id;
     /* Process data section hdr */
     struct data_section_hdr *data_hdr =
         (void *)rte_pktmbuf_adj(mbuf, sizeof(*radio_hdr));
@@ -401,6 +404,7 @@ int32_t xran_extract_iq_samples(struct rte_mbuf *mbuf,
     *sym_inc    = data_hdr->fields.sym_inc;
     *rb         = data_hdr->fields.rb;
     *sect_id    = data_hdr->fields.sect_id;
+    if (*num_prbu == 0) *num_prbu=273;
 
     if(expect_comp) {
             const struct data_section_compression_hdr *data_compr_hdr;

@@ -1107,6 +1107,30 @@ int32_t xran_get_slot_idx (uint32_t PortId, uint32_t *nFrameIdx, uint32_t *nSubf
 /**
  * @ingroup xran
  *
+ *   Function returns Frame, Subframe, Slot Number based on rx_tti
+ *
+ * @param tti
+ *    tti for which to compute Frame, Subframe, Slot
+ *
+ * @param nFrameIdx
+ *    Pointer to Frame number [0-99]
+ *
+ * @param nSubframeIdx
+ *    Pointer to Subframe number [0-10]
+ *
+ * @param nSlotIdx
+ *    Pointer to Slot number [0-7]
+ *
+ * @param nSecond
+ *    Pointer to current UTC second
+ *
+ * @return
+ *   current TTI number [0-7999]
+ */
+int32_t xran_get_slot_idx_from_tti (uint32_t tti, uint32_t *nFrameIdx, uint32_t *nSubframeIdx,  uint32_t *              nSlotIdx, uint64_t *nSecond);
+/**
+ * @ingroup xran
+ *
  *   Function returns whether it is a prach slot or not based on given port and slot number
  *
  * @param PortId

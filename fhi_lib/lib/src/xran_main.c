@@ -272,7 +272,7 @@ xran_init_prach(struct xran_fh_config* pConf, struct xran_device_ctx * p_xran_de
         printf("PRACH start symbol %u lastsymbol %u\n", p_xran_dev_ctx->prach_start_symbol[0], p_xran_dev_ctx->prach_last_symbol[0]);
     }
 
-    pPrachCPConfig->eAxC_offset = xran_get_num_eAxc(p_xran_dev_ctx);
+    pPrachCPConfig->eAxC_offset = pPRACHConfig->eAxC_offset;
     print_dbg("PRACH eAxC_offset %d\n",  pPrachCPConfig->eAxC_offset);
 
     /* Save some configs for app */
@@ -844,7 +844,7 @@ tx_cp_ul_cb(struct rte_timer *tim, void *arg)
                         struct xran_cp_gen_params params;
                         struct xran_section_gen_info sect_geninfo[8];
                         struct rte_mbuf *mbuf = xran_ethdi_mbuf_alloc();
-                        prach_port_id = ant_id + num_eAxc;
+                        prach_port_id = ant_id + pPrachCPConfig->eAxC_offset;
                         /* start new section information list */
                         xran_cp_reset_section_info(pHandle, XRAN_DIR_UL, cc_id, prach_port_id, ctx_id);
 
@@ -1059,6 +1059,7 @@ int32_t handle_ecpri_ethertype(struct rte_mbuf* pkt_q[], uint16_t xport_id, stru
         {
         case ECPRI_IQ_DATA:
                 pkt_data[num_data++] = pkt;
+            uint8_t *pkt_bytes=rte_pktmbuf_mtod(pkt,uint8_t*);
             break;
         // For RU emulation
         case ECPRI_RT_CONTROL_DATA:
@@ -1076,7 +1077,7 @@ int32_t handle_ecpri_ethertype(struct rte_mbuf* pkt_q[], uint16_t xport_id, stru
                 break;
             default:
                 if (p_dev_ctx->fh_init.io_cfg.id == O_DU) {
-                    print_err("Invalid eCPRI message type - %d", ecpri_hdr->cmnhdr.bits.ecpri_mesg_type);
+                    rte_pktmbuf_free(pkt);
         }
                 break;
     }
@@ -1771,8 +1772,7 @@ ring_processing_func_per_port(void* args)
     for (i = 0; i < ctx->io_cfg.num_vfs && i < XRAN_VF_MAX; i = i+1) {
         if (ctx->vf2xran_port[i] == port_id) {
             for(qi = 0; qi < ctx->rxq_per_port[port_id]; qi++){
-                if (process_ring(ctx->rx_ring[i][qi], i, qi))
-                    return 0;
+                process_ring(ctx->rx_ring[i][qi],i,qi);
             }
         }
     }
@@ -1837,8 +1837,6 @@ xran_spawn_workers(void)
         nWorkerCore = nWorkerCore << 1;
     }
 
-    extern int _may_i_use_cpu_feature(unsigned __int64);
-    icx_cpu = _may_i_use_cpu_feature(_FEATURE_AVX512IFMA52);
 
     printf("O-XU      %d\n", eth_ctx->io_cfg.id);
     printf("HW        %d\n", icx_cpu);
@@ -3069,6 +3067,24 @@ xran_get_slot_idx (uint32_t PortId, uint32_t *nFrameIdx, uint32_t *nSubframeIdx,
     *nSlotIdx     = (uint32_t)XranGetSlotNum(tti, SLOTNUM_PER_SUBFRAME(p_xran_dev_ctx->interval_us_local));
     *nSubframeIdx = (uint32_t)XranGetSubFrameNum(tti,SLOTNUM_PER_SUBFRAME(p_xran_dev_ctx->interval_us_local),  SUBFRAMES_PER_SYSTEMFRAME);
     *nFrameIdx    = (uint32_t)XranGetFrameNum(tti,xran_getSfnSecStart(),SUBFRAMES_PER_SYSTEMFRAME, SLOTNUM_PER_SUBFRAME(p_xran_dev_ctx->interval_us_local));
+    *nSecond      = timing_get_current_second();
+
+    return tti;
+}
+
+int32_t
+xran_get_slot_idx_from_tti (uint32_t tti, uint32_t *nFrameIdx, uint32_t *nSubframeIdx,  uint32_t *nSlotIdx, uint64_t *nSecond)
+{
+    struct xran_device_ctx * p_xran_dev_ctx = xran_dev_get_ctx_by_id(0);
+    if (!p_xran_dev_ctx)
+    {
+      print_err("Null xRAN context on port id %u!!\n", 0);
+      return 0;
+    }
+
+    *nSlotIdx     = (uint32_t)XranGetSlotNum(tti, SLOTNUM_PER_SUBFRAME(p_xran_dev_ctx->interval_us_local));
+    *nSubframeIdx = (uint32_t)XranGetSubFrameNum(tti,SLOTNUM_PER_SUBFRAME(p_xran_dev_ctx->interval_us_local),  SUBFRAMES_PER_SYSTEMFRAME);
+    *nFrameIdx    = (uint32_t)XranGetFrameNum(tti,0/*xran_getSfnSecStart()*/,SUBFRAMES_PER_SYSTEMFRAME, SLOTNUM_PER_SUBFRAME(p_xran_dev_ctx->interval_us_local));
     *nSecond      = timing_get_current_second();
 
     return tti;

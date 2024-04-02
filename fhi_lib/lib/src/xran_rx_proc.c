@@ -107,6 +107,10 @@ int xran_process_prach_sym(void *arg,
             if(mb)
                 rte_pktmbuf_free(mb);
 
+            mb = p_xran_dev_ctx->sFHPrachRxBbuIoBufCtrlDecomp[tti % XRAN_N_FE_BUF_LEN][CC_ID][Ant_ID].sBufferList.pBuffers[symb_id_offset].pCtrl;
+            if(mb)
+                rte_pktmbuf_free(mb);
+
             if(p_xran_dev_ctx->fh_cfg.ru_conf.byteOrder == XRAN_CPU_LE_BYTE_ORDER) {
                 int idx = 0;
                 uint16_t *psrc = (uint16_t *)iq_data_start;

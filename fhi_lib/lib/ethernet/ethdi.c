@@ -335,6 +335,7 @@ xran_ethdi_init_dpdk_io(char *name, const struct xran_io_cfg *io_cfg,
     uint16_t count;
 
     char *argv[] = { name, core_mask, "-n2", iova_mode, socket_mem, socket_limit, "--proc-type=auto",
+        "--no-telemetry",
         "--file-prefix", name, "-a0000:00:00.0", bbdev_wdev, bbdev_vdev};
 
 
@@ -479,11 +480,13 @@ xran_ethdi_init_dpdk_io(char *name, const struct xran_io_cfg *io_cfg,
                     ctx->tx_ring[i] = rte_ring_create(ring_name, NUM_MBUFS_RING_TRX,
                     rte_lcore_to_socket_id(*lcore_id), RING_F_SC_DEQ);
                     PANIC_ON(ctx->tx_ring[i] == NULL, "failed to allocate rx ring");
+                    printf("Created ring %s on core %d\n",ring_name,*lcore_id);
                     for(qi = 0; qi < io_cfg->num_rxq; qi++) {
                         snprintf(ring_name, RTE_DIM(ring_name), "%s_%d_%d", "rx_ring_cp", i, qi);
                         ctx->rx_ring[i][qi] = rte_ring_create(ring_name, NUM_MBUFS_RING_TRX,
                             rte_lcore_to_socket_id(*lcore_id), RING_F_SP_ENQ);
                         PANIC_ON(ctx->rx_ring[i][qi] == NULL, "failed to allocate rx ring");
+                        printf("Created ring %s on core %d\n",ring_name,*lcore_id);
                     }
                 }
             } else {
@@ -553,7 +556,7 @@ xran_ethdi_init_dpdk_io(char *name, const struct xran_io_cfg *io_cfg,
         ctx->up_dl_pkt_gen_ring[i] = rte_ring_create(ring_name, NUM_MBUFS_RING,
         rte_lcore_to_socket_id(*lcore_id), /*RING_F_SC_DEQ*/0);
         PANIC_ON(ctx->up_dl_pkt_gen_ring[i] == NULL, "failed to allocate dl gen ring");
-        printf("created %s\n", ring_name);
+        printf("created %s on core %d\n", ring_name, *lcore_id);
     }
 
     return 1;

@@ -656,6 +656,7 @@ process_mbuf(struct rte_mbuf *pkt, void* handle, struct xran_eaxc_info *p_cid)
     int32_t valid_res = 0;
     int expect_comp  = (p_dev_ctx->fh_cfg.ru_conf.compMeth != XRAN_COMPMETHOD_NONE);
     enum xran_comp_hdr_type staticComp = p_dev_ctx->fh_cfg.ru_conf.xranCompHdrType;
+    uint8_t filter_id;
 
     if (staticComp == XRAN_COMP_HDR_TYPE_STATIC)
     {
@@ -674,6 +675,7 @@ process_mbuf(struct rte_mbuf *pkt, void* handle, struct xran_eaxc_info *p_cid)
                                         &subframe_id,
                                         &slot_id,
                                         &symb_id,
+                                        &filter_id,
                                         &seq,
                                         &num_prbu,
                                         &start_prbu,
@@ -688,23 +690,9 @@ process_mbuf(struct rte_mbuf *pkt, void* handle, struct xran_eaxc_info *p_cid)
         print_err("num_bytes is wrong [%d]\n", num_bytes);
         return MBUF_FREE;
     }
-
-    valid_res = xran_pkt_validate(p_dev_ctx,
-                                pkt,
-                                iq_samp_buf,
-                                num_bytes,
-                                CC_ID,
-                                Ant_ID,
-                                frame_id,
-                                subframe_id,
-                                slot_id,
-                                symb_id,
-                                &seq,
-                                num_prbu,
-                                start_prbu,
-                                sym_inc,
-                                rb,
-                                sect_id);
+    pCnt->rx_counter++;
+    pCnt->Rx_on_time++;
+    pCnt->Total_msgs_rcvd++;
 #ifndef FCN_ADAPT
     if(valid_res != 0) {
         print_dbg("valid_res is wrong [%d] ant %u (%u : %u : %u : %u) seq %u num_bytes %d\n", valid_res, Ant_ID, frame_id, subframe_id, slot_id, symb_id, seq.seq_id, num_bytes);
@@ -1189,7 +1177,7 @@ int generate_cpmsg_prach(void *pHandle, struct xran_cp_gen_params *params, struc
         timeOffset += startSymId * (2048 + 144);
     }
     timeOffset = timeOffset >> nNumerology; //original number is Tc, convert to Ts based on mu
-    if ((slot_id == 0) || (slot_id == (SLOTNUM_PER_SUBFRAME(pxran_lib_ctx->interval_us_local) >> 1)))
+    if (startSymId > 0 && ((slot_id == 0) || (slot_id == (SLOTNUM_PER_SUBFRAME(pxran_lib_ctx->interval_us_local) >> 1))))
         timeOffset += 16;
 
     params->dir                  = XRAN_DIR_UL;
@@ -1295,8 +1283,7 @@ int32_t ring_processing_func(void* args)
 
     for (i = 0; i < ctx->io_cfg.num_vfs && i < XRAN_VF_MAX; i++){
         for(qi = 0; qi < ctx->rxq_per_port[i]; qi++) {
-            if (process_ring(ctx->rx_ring[i][qi], i, qi))
-            return 0;
+            process_ring(ctx->rx_ring[i][qi],i,qi);
         }
     }
 

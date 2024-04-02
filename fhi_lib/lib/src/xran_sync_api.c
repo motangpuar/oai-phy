@@ -37,7 +37,8 @@
 #define BUF_LEN 256
 #define PROC_DIR "/proc"
 #define COMM_FILE "comm"
-#define PMC_CMD "pmc -u -b 0 'GET PORT_DATA_SET'"
+//#define PMC_CMD "pmc -u -b 0 'GET PORT_DATA_SET'"
+#define PMC_CMD "pmc -d 24 -u -b 0 'GET PORT_DATA_SET'"
 #define PTP4L_PROC_NAME "ptp4l"
 #define PHC2SYS_PROC_NAME "phc2sys"
 
